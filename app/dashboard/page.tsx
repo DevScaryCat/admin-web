@@ -26,6 +26,231 @@ function addDays(days: number): string {
   return d.toISOString()
 }
 
+function StatusBadge({ isActive, isExpired }: { isActive: boolean; isExpired: boolean }) {
+  const active = isActive && !isExpired
+  return (
+    <span style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '6px',
+      padding: '4px 10px',
+      borderRadius: '9999px',
+      fontSize: '12px',
+      fontWeight: 500,
+      background: active ? '#f0faf5' : '#f5f5f5',
+      border: `1px solid ${active ? '#c3e6d3' : 'var(--border-card)'}`,
+      color: active ? '#1a7a4a' : 'var(--text-tertiary)',
+    }}>
+      <span style={{
+        width: '6px',
+        height: '6px',
+        borderRadius: '50%',
+        background: active ? '#22c55e' : '#d1d5db',
+        flexShrink: 0,
+      }} />
+      {active ? '활성' : '비활성'}
+    </span>
+  )
+}
+
+function RemainingDays({ remaining, isExpired, isUrgent }: { remaining: number; isExpired: boolean; isUrgent: boolean }) {
+  if (isExpired) {
+    return <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-tertiary)' }}>만료됨</span>
+  }
+  return (
+    <span style={{
+      fontSize: '13px',
+      fontWeight: 600,
+      color: isUrgent ? '#c0392b' : 'var(--text-near-black)',
+    }}>
+      {remaining}일
+    </span>
+  )
+}
+
+function ActionButton({
+  children,
+  onClick,
+  variant = 'default',
+}: {
+  children: React.ReactNode
+  onClick: () => void
+  variant?: 'default' | 'warning' | 'danger' | 'success'
+}) {
+  const styles: Record<string, React.CSSProperties> = {
+    default: {
+      background: 'var(--bg-page)',
+      border: '1px solid var(--border-input)',
+      color: 'var(--text-near-black)',
+    },
+    warning: {
+      background: '#fffbf0',
+      border: '1px solid #fde68a',
+      color: '#92400e',
+    },
+    danger: {
+      background: '#fff5f5',
+      border: '1px solid #fecaca',
+      color: '#c0392b',
+    },
+    success: {
+      background: '#f0faf5',
+      border: '1px solid #c3e6d3',
+      color: '#1a7a4a',
+    },
+  }
+
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: '6px 12px',
+        borderRadius: '9999px',
+        fontSize: '12px',
+        fontWeight: 500,
+        cursor: 'pointer',
+        transition: 'opacity 0.15s',
+        fontFamily: 'Inter, sans-serif',
+        whiteSpace: 'nowrap',
+        ...styles[variant],
+      }}
+      onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
+      onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+    >
+      {children}
+    </button>
+  )
+}
+
+function Modal({
+  title,
+  subtitle,
+  onClose,
+  children,
+}: {
+  title: string
+  subtitle?: string
+  onClose: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,0.35)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 50,
+        padding: '24px',
+        backdropFilter: 'blur(4px)',
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border-card)',
+          borderRadius: '20px',
+          padding: '32px',
+          width: '100%',
+          maxWidth: '440px',
+          boxShadow: 'var(--shadow-elevated)',
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        <h3 style={{
+          fontSize: '18px',
+          fontWeight: 700,
+          color: 'var(--text-primary)',
+          letterSpacing: '-0.5px',
+          marginBottom: subtitle ? '4px' : '24px',
+        }}>
+          {title}
+        </h3>
+        {subtitle && (
+          <p style={{
+            fontSize: '12px',
+            color: 'var(--text-tertiary)',
+            fontFamily: 'JetBrains Mono, monospace',
+            marginBottom: '24px',
+          }}>
+            {subtitle}
+          </p>
+        )}
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function DaySelector({
+  value,
+  onChange,
+  prefix = '',
+}: {
+  value: number
+  onChange: (d: number) => void
+  prefix?: string
+}) {
+  return (
+    <div>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(4, 1fr)',
+        gap: '8px',
+        marginBottom: '12px',
+      }}>
+        {PRESET_DAYS.map(d => (
+          <button
+            key={d}
+            onClick={() => onChange(d)}
+            style={{
+              padding: '8px 0',
+              borderRadius: '9999px',
+              fontSize: '12px',
+              fontWeight: 500,
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+              fontFamily: 'Inter, sans-serif',
+              background: value === d ? '#000000' : 'var(--bg-page)',
+              color: value === d ? '#ffffff' : 'var(--text-secondary)',
+              border: `1px solid ${value === d ? '#000000' : 'var(--border-input)'}`,
+            }}
+          >
+            {prefix}{d}일
+          </button>
+        ))}
+      </div>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+      }}>
+        <label style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>직접 입력</label>
+        <input
+          type="number"
+          value={value}
+          onChange={e => onChange(Number(e.target.value))}
+          style={{
+            width: '72px',
+            background: 'var(--bg-page)',
+            border: '1px solid var(--border-input)',
+            borderRadius: '8px',
+            padding: '6px 10px',
+            fontSize: '13px',
+            color: 'var(--text-near-black)',
+            outline: 'none',
+            fontFamily: 'Inter, sans-serif',
+          }}
+        />
+        <span style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>일</span>
+      </div>
+    </div>
+  )
+}
+
 export default function DashboardPage() {
   const router = useRouter()
   const [licenses, setLicenses] = useState<License[]>([])
@@ -92,193 +317,501 @@ export default function DashboardPage() {
     fetchLicenses()
   }
 
+  const activeCount = licenses.filter(l => l.is_active && getRemainingDays(l.expires_at) > 0).length
+  const expiredCount = licenses.filter(l => getRemainingDays(l.expires_at) <= 0).length
+
   return (
-    <div className="min-h-screen bg-[#0a0a14] text-white">
-      <header className="border-b border-white/[0.06] bg-[#0d0d1a] px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-[#03C75A] to-[#1ED760] flex items-center justify-center shadow-lg">
-            <span className="text-white font-bold text-sm">A</span>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-page)' }}>
+      <header style={{
+        background: 'rgba(240,240,243,0.85)',
+        borderBottom: '1px solid var(--border-card)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 40,
+      }}>
+        <div style={{
+          maxWidth: '1200px',
+          margin: '0 auto',
+          padding: '0 32px',
+          height: '60px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '10px',
+              background: '#000000',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <span style={{ color: '#fff', fontWeight: 800, fontSize: '14px', letterSpacing: '-0.5px' }}>A</span>
+            </div>
+            <div>
+              <span style={{
+                fontSize: '14px',
+                fontWeight: 700,
+                color: 'var(--text-primary)',
+                letterSpacing: '-0.3px',
+              }}>
+                AutoBrand
+              </span>
+              <span style={{
+                fontSize: '12px',
+                color: 'var(--text-tertiary)',
+                marginLeft: '8px',
+              }}>
+                관리자
+              </span>
+            </div>
           </div>
-          <div>
-            <h1 className="text-sm font-bold text-white">AutoBrand 관리자</h1>
-            <p className="text-[10px] text-zinc-500">라이선스 관리 시스템</p>
-          </div>
+
+          <button
+            onClick={() => { setNewKey(genKey()); setShowCreate(true) }}
+            style={{
+              background: '#000000',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '9999px',
+              padding: '8px 18px',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'opacity 0.15s',
+              fontFamily: 'Inter, sans-serif',
+              letterSpacing: '-0.2px',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
+            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+          >
+            + 새 라이선스
+          </button>
         </div>
-        <button
-          onClick={() => { setNewKey(genKey()); setShowCreate(true) }}
-          className="bg-gradient-to-r from-[#03C75A] to-[#1ED760] text-white font-semibold text-xs px-4 py-2 rounded-lg hover:opacity-90 active:scale-[0.97] transition-all"
-        >
-          + 새 라이선스 발급
-        </button>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-8">
-        <div className="flex items-center gap-3 mb-6">
-          <h2 className="text-lg font-semibold">전체 라이선스</h2>
-          <span className="text-xs bg-white/[0.06] text-zinc-400 px-2 py-0.5 rounded-full">{licenses.length}개</span>
+      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px 32px' }}>
+        <div style={{ marginBottom: '40px' }}>
+          <h1 style={{
+            fontSize: '36px',
+            fontWeight: 800,
+            color: 'var(--text-primary)',
+            letterSpacing: '-2px',
+            lineHeight: 1.1,
+            marginBottom: '8px',
+          }}>
+            라이선스 관리
+          </h1>
+          <p style={{ fontSize: '15px', color: 'var(--text-secondary)' }}>
+            AutoBrand Connect 사용자 라이선스를 관리합니다.
+          </p>
         </div>
 
-        {loading ? (
-          <div className="flex justify-center py-20">
-            <div className="w-8 h-8 border-4 border-[#03C75A] border-t-transparent rounded-full animate-spin" />
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: '16px',
+          marginBottom: '40px',
+        }}>
+          {[
+            { label: '전체 라이선스', value: licenses.length, sub: '등록된 키 수' },
+            { label: '활성 라이선스', value: activeCount, sub: '현재 사용 중' },
+            { label: '만료된 키', value: expiredCount, sub: '갱신 필요' },
+          ].map(stat => (
+            <div key={stat.label} style={{
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-card)',
+              borderRadius: '16px',
+              padding: '24px',
+              boxShadow: 'var(--shadow-whisper)',
+            }}>
+              <p style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-tertiary)', marginBottom: '8px' }}>
+                {stat.label}
+              </p>
+              <p style={{
+                fontSize: '32px',
+                fontWeight: 800,
+                color: 'var(--text-primary)',
+                letterSpacing: '-1.5px',
+                lineHeight: 1,
+                marginBottom: '4px',
+              }}>
+                {stat.value}
+              </p>
+              <p style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>{stat.sub}</p>
+            </div>
+          ))}
+        </div>
+
+        <div style={{
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border-card)',
+          borderRadius: '16px',
+          boxShadow: 'var(--shadow-whisper)',
+          overflow: 'hidden',
+        }}>
+          <div style={{
+            padding: '20px 24px',
+            borderBottom: '1px solid var(--border-card)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <h2 style={{
+                fontSize: '15px',
+                fontWeight: 600,
+                color: 'var(--text-near-black)',
+                letterSpacing: '-0.3px',
+              }}>
+                전체 목록
+              </h2>
+              <span style={{
+                fontSize: '11px',
+                fontWeight: 500,
+                color: 'var(--text-tertiary)',
+                background: 'var(--bg-page)',
+                border: '1px solid var(--border-card)',
+                borderRadius: '9999px',
+                padding: '2px 8px',
+              }}>
+                {licenses.length}개
+              </span>
+            </div>
           </div>
-        ) : (
-          <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-white/[0.06] text-zinc-500 text-xs">
-                  <th className="text-left px-5 py-3 font-medium">라이선스 키</th>
-                  <th className="text-left px-4 py-3 font-medium">만료일</th>
-                  <th className="text-left px-4 py-3 font-medium">남은 기간</th>
-                  <th className="text-left px-4 py-3 font-medium">상태</th>
-                  <th className="text-right px-5 py-3 font-medium">액션</th>
-                </tr>
-              </thead>
-              <tbody>
-                {licenses.map((lic, i) => {
-                  const remaining = getRemainingDays(lic.expires_at)
-                  const isExpired = remaining < 0
-                  const isUrgent = !isExpired && remaining <= 3
-                  return (
-                    <tr key={lic.id} className={`border-b border-white/[0.04] last:border-0 ${i % 2 === 0 ? '' : 'bg-white/[0.01]'}`}>
-                      <td className="px-5 py-4 font-mono text-xs text-zinc-200">{lic.license_key}</td>
-                      <td className="px-4 py-4 text-zinc-400 text-xs">{formatDate(lic.expires_at)}</td>
-                      <td className="px-4 py-4">
-                        <span className={`text-xs font-semibold ${isExpired ? 'text-zinc-500' : isUrgent ? 'text-red-400' : 'text-[#03C75A]'}`}>
-                          {isExpired ? '만료됨' : `${remaining}일`}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4">
-                        <span className={`inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full ${lic.is_active && !isExpired ? 'bg-[#03C75A]/10 text-[#03C75A]' : 'bg-zinc-700/40 text-zinc-500'}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${lic.is_active && !isExpired ? 'bg-[#03C75A]' : 'bg-zinc-500'}`} />
-                          {lic.is_active && !isExpired ? '활성' : '비활성'}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4 text-right">
-                        <div className="flex justify-end gap-2">
-                          <button
-                            onClick={() => { setExtendTarget(lic); setExtendDays(90) }}
-                            className="text-xs px-3 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-zinc-300 transition-all"
-                          >
-                            연장
-                          </button>
-                          <button
-                            onClick={() => handleToggleActive(lic)}
-                            className={`text-xs px-3 py-1.5 rounded-lg transition-all ${lic.is_active ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-400' : 'bg-[#03C75A]/10 hover:bg-[#03C75A]/20 text-[#03C75A]'}`}
-                          >
-                            {lic.is_active ? '비활성화' : '활성화'}
-                          </button>
-                          <button
-                            onClick={() => handleDelete(lic)}
-                            className="text-xs px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-all"
-                          >
-                            삭제
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-                {licenses.length === 0 && (
-                  <tr><td colSpan={5} className="px-5 py-12 text-center text-zinc-600 text-sm">등록된 라이선스가 없습니다.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
+
+          {loading ? (
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '80px 24px',
+              gap: '16px',
+            }}>
+              <div style={{
+                width: '32px',
+                height: '32px',
+                border: '2.5px solid var(--border-card)',
+                borderTopColor: '#000',
+                borderRadius: '50%',
+                animation: 'spin 0.8s linear infinite',
+              }} />
+              <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+              <p style={{ fontSize: '13px', color: 'var(--text-tertiary)' }}>불러오는 중...</p>
+            </div>
+          ) : licenses.length === 0 ? (
+            <div style={{
+              padding: '80px 24px',
+              textAlign: 'center',
+            }}>
+              <p style={{ fontSize: '14px', color: 'var(--text-tertiary)' }}>등록된 라이선스가 없습니다.</p>
+              <button
+                onClick={() => { setNewKey(genKey()); setShowCreate(true) }}
+                style={{
+                  marginTop: '16px',
+                  background: '#000',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '9999px',
+                  padding: '10px 20px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontFamily: 'Inter, sans-serif',
+                }}
+              >
+                첫 라이선스 발급하기
+              </button>
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border-card)' }}>
+                    {['라이선스 키', '만료일', '남은 기간', '상태', '액션'].map((th, i) => (
+                      <th key={th} style={{
+                        padding: '12px 20px',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        color: 'var(--text-tertiary)',
+                        textAlign: i === 4 ? 'right' : 'left',
+                        letterSpacing: '0.3px',
+                        textTransform: 'uppercase',
+                        background: 'var(--bg-page)',
+                      }}>
+                        {th}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {licenses.map(lic => {
+                    const remaining = getRemainingDays(lic.expires_at)
+                    const isExpired = remaining < 0
+                    const isUrgent = !isExpired && remaining <= 3
+                    return (
+                      <tr
+                        key={lic.id}
+                        style={{
+                          borderBottom: '1px solid var(--border-card)',
+                          transition: 'background 0.1s',
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-page)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                      >
+                        <td style={{ padding: '16px 20px' }}>
+                          <span style={{
+                            fontFamily: 'JetBrains Mono, monospace',
+                            fontSize: '12px',
+                            fontWeight: 500,
+                            color: 'var(--text-near-black)',
+                            background: 'var(--bg-page)',
+                            border: '1px solid var(--border-card)',
+                            borderRadius: '6px',
+                            padding: '4px 8px',
+                            letterSpacing: '0.5px',
+                          }}>
+                            {lic.license_key}
+                          </span>
+                        </td>
+                        <td style={{ padding: '16px 20px' }}>
+                          <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                            {formatDate(lic.expires_at)}
+                          </span>
+                        </td>
+                        <td style={{ padding: '16px 20px' }}>
+                          <RemainingDays remaining={remaining} isExpired={isExpired} isUrgent={isUrgent} />
+                        </td>
+                        <td style={{ padding: '16px 20px' }}>
+                          <StatusBadge isActive={lic.is_active} isExpired={isExpired} />
+                        </td>
+                        <td style={{ padding: '16px 20px', textAlign: 'right' }}>
+                          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                            <ActionButton
+                              variant="default"
+                              onClick={() => { setExtendTarget(lic); setExtendDays(90) }}
+                            >
+                              연장
+                            </ActionButton>
+                            <ActionButton
+                              variant={lic.is_active ? 'warning' : 'success'}
+                              onClick={() => handleToggleActive(lic)}
+                            >
+                              {lic.is_active ? '비활성화' : '활성화'}
+                            </ActionButton>
+                            <ActionButton
+                              variant="danger"
+                              onClick={() => handleDelete(lic)}
+                            >
+                              삭제
+                            </ActionButton>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </main>
 
       {showCreate && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowCreate(false)}>
-          <div className="bg-[#111120] border border-white/[0.1] rounded-2xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
-            <h3 className="text-base font-semibold mb-5">새 라이선스 발급</h3>
-            <div className="flex flex-col gap-4">
-              <div>
-                <label className="block text-xs text-zinc-400 mb-1.5">라이선스 키</label>
-                <div className="flex gap-2">
-                  <input
-                    value={newKey}
-                    onChange={e => setNewKey(e.target.value)}
-                    className="flex-1 bg-white/[0.05] border border-white/[0.1] rounded-xl px-3 py-2.5 text-xs font-mono text-white outline-none focus:border-[#03C75A]/50 transition-all"
-                  />
-                  <button onClick={() => setNewKey(genKey())} className="text-xs px-3 py-2.5 bg-white/[0.06] rounded-xl hover:bg-white/[0.1] text-zinc-300 transition-all whitespace-nowrap">
-                    자동 생성
-                  </button>
-                </div>
+        <Modal title="새 라이선스 발급" onClose={() => setShowCreate(false)}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '12px',
+                fontWeight: 500,
+                color: 'var(--text-secondary)',
+                marginBottom: '8px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+              }}>
+                라이선스 키
+              </label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  value={newKey}
+                  onChange={e => setNewKey(e.target.value)}
+                  style={{
+                    flex: 1,
+                    background: 'var(--bg-page)',
+                    border: '1px solid var(--border-input)',
+                    borderRadius: '8px',
+                    padding: '10px 12px',
+                    fontSize: '12px',
+                    fontFamily: 'JetBrains Mono, monospace',
+                    color: 'var(--text-near-black)',
+                    outline: 'none',
+                    letterSpacing: '0.5px',
+                  }}
+                />
+                <button
+                  onClick={() => setNewKey(genKey())}
+                  style={{
+                    background: 'var(--bg-page)',
+                    border: '1px solid var(--border-input)',
+                    borderRadius: '9999px',
+                    padding: '10px 14px',
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    fontFamily: 'Inter, sans-serif',
+                    whiteSpace: 'nowrap',
+                    transition: 'opacity 0.15s',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.opacity = '0.7')}
+                  onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                >
+                  자동 생성
+                </button>
               </div>
-              <div>
-                <label className="block text-xs text-zinc-400 mb-1.5">사용 기간</label>
-                <div className="grid grid-cols-4 gap-2 mb-2">
-                  {PRESET_DAYS.map(d => (
-                    <button
-                      key={d}
-                      onClick={() => setNewDays(d)}
-                      className={`text-xs py-2 rounded-lg transition-all ${newDays === d ? 'bg-[#03C75A] text-white' : 'bg-white/[0.06] text-zinc-400 hover:bg-white/[0.1]'}`}
-                    >
-                      {d}일
-                    </button>
-                  ))}
-                </div>
-                <div className="flex items-center gap-2 text-xs text-zinc-500">
-                  <span>직접 입력:</span>
-                  <input
-                    type="number"
-                    value={newDays}
-                    onChange={e => setNewDays(Number(e.target.value))}
-                    className="w-20 bg-white/[0.05] border border-white/[0.1] rounded-lg px-2 py-1 text-white text-xs outline-none"
-                  />
-                  <span>일</span>
-                </div>
-              </div>
-              <p className="text-xs text-zinc-600">만료일: {formatDate(addDays(newDays))}</p>
             </div>
-            <div className="flex gap-3 mt-6">
-              <button onClick={() => setShowCreate(false)} className="flex-1 py-2.5 rounded-xl bg-white/[0.06] text-zinc-400 text-sm hover:bg-white/[0.1] transition-all">취소</button>
-              <button onClick={handleCreate} disabled={creating || !newKey} className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#03C75A] to-[#1ED760] text-white text-sm font-semibold disabled:opacity-50 hover:opacity-90 transition-all">
+
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '12px',
+                fontWeight: 500,
+                color: 'var(--text-secondary)',
+                marginBottom: '10px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+              }}>
+                사용 기간
+              </label>
+              <DaySelector value={newDays} onChange={setNewDays} />
+              <p style={{
+                marginTop: '12px',
+                fontSize: '12px',
+                color: 'var(--text-tertiary)',
+              }}>
+                만료일: {formatDate(addDays(newDays))}
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', paddingTop: '4px' }}>
+              <button
+                onClick={() => setShowCreate(false)}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  borderRadius: '9999px',
+                  background: 'var(--bg-page)',
+                  border: '1px solid var(--border-input)',
+                  color: 'var(--text-secondary)',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  fontFamily: 'Inter, sans-serif',
+                  transition: 'opacity 0.15s',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.opacity = '0.7')}
+                onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+              >
+                취소
+              </button>
+              <button
+                onClick={handleCreate}
+                disabled={creating || !newKey}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  borderRadius: '9999px',
+                  background: '#000000',
+                  border: 'none',
+                  color: '#ffffff',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: creating || !newKey ? 'not-allowed' : 'pointer',
+                  opacity: creating || !newKey ? 0.5 : 1,
+                  fontFamily: 'Inter, sans-serif',
+                  transition: 'opacity 0.15s',
+                }}
+              >
                 {creating ? '발급 중...' : '발급하기'}
               </button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
 
       {extendTarget && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setExtendTarget(null)}>
-          <div className="bg-[#111120] border border-white/[0.1] rounded-2xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
-            <h3 className="text-base font-semibold mb-1">기간 연장</h3>
-            <p className="text-xs text-zinc-500 mb-5 font-mono">{extendTarget.license_key}</p>
+        <Modal
+          title="기간 연장"
+          subtitle={extendTarget.license_key}
+          onClose={() => setExtendTarget(null)}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div>
-              <label className="block text-xs text-zinc-400 mb-2">추가할 기간</label>
-              <div className="grid grid-cols-4 gap-2 mb-3">
-                {PRESET_DAYS.map(d => (
-                  <button
-                    key={d}
-                    onClick={() => setExtendDays(d)}
-                    className={`text-xs py-2 rounded-lg transition-all ${extendDays === d ? 'bg-[#03C75A] text-white' : 'bg-white/[0.06] text-zinc-400 hover:bg-white/[0.1]'}`}
-                  >
-                    +{d}일
-                  </button>
-                ))}
-              </div>
-              <div className="flex items-center gap-2 text-xs text-zinc-500">
-                <span>직접 입력:</span>
-                <input
-                  type="number"
-                  value={extendDays}
-                  onChange={e => setExtendDays(Number(e.target.value))}
-                  className="w-20 bg-white/[0.05] border border-white/[0.1] rounded-lg px-2 py-1 text-white text-xs outline-none"
-                />
-                <span>일</span>
-              </div>
+              <label style={{
+                display: 'block',
+                fontSize: '12px',
+                fontWeight: 500,
+                color: 'var(--text-secondary)',
+                marginBottom: '10px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+              }}>
+                추가할 기간
+              </label>
+              <DaySelector value={extendDays} onChange={setExtendDays} prefix="+" />
             </div>
-            <div className="flex gap-3 mt-6">
-              <button onClick={() => setExtendTarget(null)} className="flex-1 py-2.5 rounded-xl bg-white/[0.06] text-zinc-400 text-sm hover:bg-white/[0.1] transition-all">취소</button>
-              <button onClick={handleExtend} className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#03C75A] to-[#1ED760] text-white text-sm font-semibold hover:opacity-90 transition-all">
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={() => setExtendTarget(null)}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  borderRadius: '9999px',
+                  background: 'var(--bg-page)',
+                  border: '1px solid var(--border-input)',
+                  color: 'var(--text-secondary)',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  fontFamily: 'Inter, sans-serif',
+                  transition: 'opacity 0.15s',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.opacity = '0.7')}
+                onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+              >
+                취소
+              </button>
+              <button
+                onClick={handleExtend}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  borderRadius: '9999px',
+                  background: '#000000',
+                  border: 'none',
+                  color: '#ffffff',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontFamily: 'Inter, sans-serif',
+                  transition: 'opacity 0.15s',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
+                onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+              >
                 연장하기
               </button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   )

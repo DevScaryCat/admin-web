@@ -27,36 +27,162 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a14] flex items-center justify-center p-6">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#03C75A] to-[#1ED760] mb-4 shadow-lg shadow-[#03C75A]/30">
-            <span className="text-white font-bold text-2xl">A</span>
+    <div style={{
+      minHeight: '100vh',
+      background: 'var(--bg-page)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '24px',
+    }}>
+      <div style={{ width: '100%', maxWidth: '400px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '56px',
+            height: '56px',
+            borderRadius: '16px',
+            background: '#000000',
+            marginBottom: '20px',
+            boxShadow: 'var(--shadow-whisper)',
+          }}>
+            <span style={{
+              color: '#ffffff',
+              fontWeight: 800,
+              fontSize: '22px',
+              fontFamily: 'Inter, sans-serif',
+              letterSpacing: '-1px',
+            }}>A</span>
           </div>
-          <h1 className="text-2xl font-bold text-white">AutoBrand 관리자</h1>
-          <p className="text-zinc-500 text-sm mt-1">라이선스 관리 시스템</p>
+          <h1 style={{
+            fontSize: '32px',
+            fontWeight: 800,
+            color: 'var(--text-primary)',
+            letterSpacing: '-1.6px',
+            lineHeight: 1.1,
+            marginBottom: '8px',
+          }}>
+            AutoBrand
+          </h1>
+          <p style={{
+            fontSize: '16px',
+            color: 'var(--text-secondary)',
+            fontWeight: 400,
+          }}>
+            라이선스 관리 시스템
+          </p>
         </div>
-        <form onSubmit={handleLogin} className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6 flex flex-col gap-4">
-          <div>
-            <label className="block text-xs font-medium text-zinc-400 mb-1.5">관리자 비밀번호</label>
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              placeholder="비밀번호를 입력하세요"
-              className="w-full bg-white/[0.05] border border-white/[0.1] rounded-xl px-4 py-3 text-white text-sm placeholder-zinc-600 outline-none focus:border-[#03C75A]/50 focus:ring-1 focus:ring-[#03C75A]/30 transition-all"
-              required
-            />
-          </div>
-          {error && <p className="text-red-400 text-xs">{error}</p>}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-[#03C75A] to-[#1ED760] text-white font-semibold py-3 rounded-xl text-sm disabled:opacity-50 hover:opacity-90 active:scale-[0.98] transition-all"
-          >
-            {loading ? '확인 중...' : '로그인'}
-          </button>
-        </form>
+
+        <div style={{
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border-card)',
+          borderRadius: '16px',
+          padding: '32px',
+          boxShadow: 'var(--shadow-whisper)',
+        }}>
+          <h2 style={{
+            fontSize: '18px',
+            fontWeight: 600,
+            color: 'var(--text-near-black)',
+            marginBottom: '24px',
+            letterSpacing: '-0.3px',
+          }}>
+            관리자 로그인
+          </h2>
+
+          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '13px',
+                fontWeight: 500,
+                color: 'var(--text-mid)',
+                marginBottom: '8px',
+              }}>
+                비밀번호
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="관리자 비밀번호를 입력하세요"
+                required
+                style={{
+                  width: '100%',
+                  background: 'var(--bg-page)',
+                  border: '1px solid var(--border-input)',
+                  borderRadius: '8px',
+                  padding: '10px 14px',
+                  fontSize: '14px',
+                  color: 'var(--text-near-black)',
+                  outline: 'none',
+                  transition: 'border-color 0.15s, box-shadow 0.15s',
+                  fontFamily: 'Inter, sans-serif',
+                }}
+                onFocus={e => {
+                  e.target.style.borderColor = '#000'
+                  e.target.style.boxShadow = '0 0 0 3px rgba(0,0,0,0.08)'
+                }}
+                onBlur={e => {
+                  e.target.style.borderColor = 'var(--border-input)'
+                  e.target.style.boxShadow = 'none'
+                }}
+              />
+            </div>
+
+            {error && (
+              <p style={{
+                fontSize: '13px',
+                color: '#c0392b',
+                background: '#fdf2f2',
+                border: '1px solid #f5c6cb',
+                borderRadius: '8px',
+                padding: '10px 14px',
+              }}>
+                {error}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                width: '100%',
+                background: '#000000',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '9999px',
+                padding: '12px 24px',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.6 : 1,
+                transition: 'opacity 0.15s, transform 0.1s',
+                fontFamily: 'Inter, sans-serif',
+                letterSpacing: '-0.2px',
+              }}
+              onMouseEnter={e => {
+                if (!loading) (e.target as HTMLButtonElement).style.opacity = '0.8'
+              }}
+              onMouseLeave={e => {
+                if (!loading) (e.target as HTMLButtonElement).style.opacity = '1'
+              }}
+            >
+              {loading ? '확인 중...' : '로그인'}
+            </button>
+          </form>
+        </div>
+
+        <p style={{
+          textAlign: 'center',
+          marginTop: '24px',
+          fontSize: '12px',
+          color: 'var(--text-tertiary)',
+        }}>
+          AutoBrand Connect © 2026
+        </p>
       </div>
     </div>
   )
