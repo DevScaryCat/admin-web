@@ -381,26 +381,50 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <button
-            onClick={() => { setNewKey(genKey()); setShowCreate(true) }}
-            style={{
-              background: '#000000',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '9999px',
-              padding: '8px 18px',
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'opacity 0.15s',
-              fontFamily: 'Inter, sans-serif',
-              letterSpacing: '-0.2px',
-            }}
-            onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
-            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-          >
-            + 새 라이선스
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <button
+              onClick={async () => {
+                await fetch('/api/auth', { method: 'DELETE' })
+                router.push('/')
+              }}
+              style={{
+                background: 'transparent',
+                color: 'var(--text-secondary)',
+                border: '1px solid var(--border-input)',
+                borderRadius: '9999px',
+                padding: '8px 16px',
+                fontSize: '13px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'all 0.15s',
+                fontFamily: 'Inter, sans-serif',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-page)' }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'transparent' }}
+            >
+              로그아웃
+            </button>
+            <button
+              onClick={() => { setNewKey(genKey()); setShowCreate(true) }}
+              style={{
+                background: '#000000',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '9999px',
+                padding: '8px 18px',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'opacity 0.15s',
+                fontFamily: 'Inter, sans-serif',
+                letterSpacing: '-0.2px',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
+              onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+            >
+              + 새 라이선스
+            </button>
+          </div>
         </div>
       </header>
 
