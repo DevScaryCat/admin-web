@@ -11,4 +11,6 @@ export interface License {
   expires_at: string
   is_active: boolean
   created_at: string
+  name: string | null
+  phone: string | null
 }

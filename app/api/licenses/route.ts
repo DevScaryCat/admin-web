@@ -14,13 +14,13 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   if (!await isAuthenticated()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const { license_key, expires_at } = await req.json()
+  const { license_key, expires_at, name, phone } = await req.json()
   if (!license_key || !expires_at) {
     return NextResponse.json({ error: '키와 만료일은 필수입니다.' }, { status: 400 })
   }
   const { data, error } = await supabaseAdmin
     .from('licenses')
-    .insert({ license_key, expires_at, is_active: true })
+    .insert({ license_key, expires_at, is_active: true, name: name || null, phone: phone || null })
     .select()
     .single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

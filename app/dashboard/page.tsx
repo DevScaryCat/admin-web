@@ -1,9 +1,11 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { License } from '@/lib/supabase'
 
 const PRESET_DAYS = [30, 90, 180, 365]
+
+type SortKey = 'remaining_asc' | 'remaining_desc' | 'created_desc' | 'name_asc'
 
 function getRemainingDays(expiresAt: string): number {
   return Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 1000 / 60 / 60 / 24)
@@ -57,12 +59,9 @@ function RemainingDays({ remaining, isExpired, isUrgent }: { remaining: number; 
   if (isExpired) {
     return <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-tertiary)' }}>만료됨</span>
   }
+  const color = isUrgent ? (remaining <= 3 ? '#c0392b' : '#b45309') : 'var(--text-near-black)'
   return (
-    <span style={{
-      fontSize: '13px',
-      fontWeight: 600,
-      color: isUrgent ? '#c0392b' : 'var(--text-near-black)',
-    }}>
+    <span style={{ fontSize: '13px', fontWeight: 600, color }}>
       {remaining}일
     </span>
   )
@@ -78,28 +77,11 @@ function ActionButton({
   variant?: 'default' | 'warning' | 'danger' | 'success'
 }) {
   const styles: Record<string, React.CSSProperties> = {
-    default: {
-      background: 'var(--bg-page)',
-      border: '1px solid var(--border-input)',
-      color: 'var(--text-near-black)',
-    },
-    warning: {
-      background: '#fffbf0',
-      border: '1px solid #fde68a',
-      color: '#92400e',
-    },
-    danger: {
-      background: '#fff5f5',
-      border: '1px solid #fecaca',
-      color: '#c0392b',
-    },
-    success: {
-      background: '#f0faf5',
-      border: '1px solid #c3e6d3',
-      color: '#1a7a4a',
-    },
+    default: { background: 'var(--bg-page)', border: '1px solid var(--border-input)', color: 'var(--text-near-black)' },
+    warning: { background: '#fffbf0', border: '1px solid #fde68a', color: '#92400e' },
+    danger: { background: '#fff5f5', border: '1px solid #fecaca', color: '#c0392b' },
+    success: { background: '#f0faf5', border: '1px solid #c3e6d3', color: '#1a7a4a' },
   }
-
   return (
     <button
       onClick={onClick}
@@ -122,12 +104,7 @@ function ActionButton({
   )
 }
 
-function Modal({
-  title,
-  subtitle,
-  onClose,
-  children,
-}: {
+function Modal({ title, subtitle, onClose, children }: {
   title: string
   subtitle?: string
   onClose: () => void
@@ -155,7 +132,7 @@ function Modal({
           borderRadius: '20px',
           padding: '32px',
           width: '100%',
-          maxWidth: '440px',
+          maxWidth: '480px',
           boxShadow: 'var(--shadow-elevated)',
         }}
         onClick={e => e.stopPropagation()}
@@ -185,23 +162,14 @@ function Modal({
   )
 }
 
-function DaySelector({
-  value,
-  onChange,
-  prefix = '',
-}: {
+function DaySelector({ value, onChange, prefix = '' }: {
   value: number
   onChange: (d: number) => void
   prefix?: string
 }) {
   return (
     <div>
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
-        gap: '8px',
-        marginBottom: '12px',
-      }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '12px' }}>
         {PRESET_DAYS.map(d => (
           <button
             key={d}
@@ -223,11 +191,7 @@ function DaySelector({
           </button>
         ))}
       </div>
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-      }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <label style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>직접 입력</label>
         <input
           type="number"
@@ -251,6 +215,29 @@ function DaySelector({
   )
 }
 
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  background: 'var(--bg-page)',
+  border: '1px solid var(--border-input)',
+  borderRadius: '8px',
+  padding: '10px 12px',
+  fontSize: '13px',
+  color: 'var(--text-near-black)',
+  outline: 'none',
+  fontFamily: 'Inter, sans-serif',
+  boxSizing: 'border-box',
+}
+
+const labelStyle: React.CSSProperties = {
+  display: 'block',
+  fontSize: '12px',
+  fontWeight: 500,
+  color: 'var(--text-secondary)',
+  marginBottom: '8px',
+  textTransform: 'uppercase',
+  letterSpacing: '0.5px',
+}
+
 export default function DashboardPage() {
   const router = useRouter()
   const [licenses, setLicenses] = useState<License[]>([])
@@ -259,10 +246,15 @@ export default function DashboardPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [newKey, setNewKey] = useState('')
   const [newDays, setNewDays] = useState(90)
+  const [newName, setNewName] = useState('')
+  const [newPhone, setNewPhone] = useState('')
   const [creating, setCreating] = useState(false)
 
   const [extendTarget, setExtendTarget] = useState<License | null>(null)
   const [extendDays, setExtendDays] = useState(90)
+
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortKey, setSortKey] = useState<SortKey>('created_desc')
 
   const fetchLicenses = useCallback(async () => {
     const res = await fetch('/api/licenses')
@@ -280,12 +272,19 @@ export default function DashboardPage() {
     await fetch('/api/licenses', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ license_key: newKey, expires_at: addDays(newDays) }),
+      body: JSON.stringify({
+        license_key: newKey,
+        expires_at: addDays(newDays),
+        name: newName || null,
+        phone: newPhone || null,
+      }),
     })
     setCreating(false)
     setShowCreate(false)
     setNewKey('')
     setNewDays(90)
+    setNewName('')
+    setNewPhone('')
     fetchLicenses()
   }
 
@@ -319,6 +318,25 @@ export default function DashboardPage() {
 
   const activeCount = licenses.filter(l => l.is_active && getRemainingDays(l.expires_at) > 0).length
   const expiredCount = licenses.filter(l => getRemainingDays(l.expires_at) <= 0).length
+
+  const filteredAndSorted = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    let result = licenses.filter(l => {
+      if (!q) return true
+      return (
+        l.license_key.toLowerCase().includes(q) ||
+        (l.name ?? '').toLowerCase().includes(q) ||
+        (l.phone ?? '').toLowerCase().includes(q)
+      )
+    })
+    result = [...result].sort((a, b) => {
+      if (sortKey === 'remaining_asc') return getRemainingDays(a.expires_at) - getRemainingDays(b.expires_at)
+      if (sortKey === 'remaining_desc') return getRemainingDays(b.expires_at) - getRemainingDays(a.expires_at)
+      if (sortKey === 'name_asc') return (a.name ?? '').localeCompare(b.name ?? '')
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    })
+    return result
+  }, [licenses, searchQuery, sortKey])
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-page)' }}>
@@ -354,19 +372,10 @@ export default function DashboardPage() {
               <span style={{ color: '#fff', fontWeight: 800, fontSize: '14px', letterSpacing: '-0.5px' }}>A</span>
             </div>
             <div>
-              <span style={{
-                fontSize: '14px',
-                fontWeight: 700,
-                color: 'var(--text-primary)',
-                letterSpacing: '-0.3px',
-              }}>
+              <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>
                 AutoBrand
               </span>
-              <span style={{
-                fontSize: '12px',
-                color: 'var(--text-tertiary)',
-                marginLeft: '8px',
-              }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginLeft: '8px' }}>
                 관리자
               </span>
             </div>
@@ -412,12 +421,7 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: '16px',
-          marginBottom: '40px',
-        }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '40px' }}>
           {[
             { label: '전체 라이선스', value: licenses.length, sub: '등록된 키 수' },
             { label: '활성 라이선스', value: activeCount, sub: '현재 사용 중' },
@@ -433,14 +437,7 @@ export default function DashboardPage() {
               <p style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-tertiary)', marginBottom: '8px' }}>
                 {stat.label}
               </p>
-              <p style={{
-                fontSize: '32px',
-                fontWeight: 800,
-                color: 'var(--text-primary)',
-                letterSpacing: '-1.5px',
-                lineHeight: 1,
-                marginBottom: '4px',
-              }}>
+              <p style={{ fontSize: '32px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-1.5px', lineHeight: 1, marginBottom: '4px' }}>
                 {stat.value}
               </p>
               <p style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>{stat.sub}</p>
@@ -461,14 +458,11 @@ export default function DashboardPage() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            gap: '16px',
+            flexWrap: 'wrap',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <h2 style={{
-                fontSize: '15px',
-                fontWeight: 600,
-                color: 'var(--text-near-black)',
-                letterSpacing: '-0.3px',
-              }}>
+              <h2 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-near-black)', letterSpacing: '-0.3px' }}>
                 전체 목록
               </h2>
               <span style={{
@@ -480,67 +474,92 @@ export default function DashboardPage() {
                 borderRadius: '9999px',
                 padding: '2px 8px',
               }}>
-                {licenses.length}개
+                {filteredAndSorted.length}개
               </span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+              <div style={{ position: 'relative' }}>
+                <svg style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', width: '14px', height: '14px', color: 'var(--text-tertiary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="이름, 전화번호, 키 검색"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  style={{
+                    paddingLeft: '32px',
+                    paddingRight: '12px',
+                    paddingTop: '7px',
+                    paddingBottom: '7px',
+                    background: 'var(--bg-page)',
+                    border: '1px solid var(--border-input)',
+                    borderRadius: '9999px',
+                    fontSize: '12px',
+                    color: 'var(--text-near-black)',
+                    outline: 'none',
+                    fontFamily: 'Inter, sans-serif',
+                    width: '220px',
+                  }}
+                />
+              </div>
+
+              <select
+                value={sortKey}
+                onChange={e => setSortKey(e.target.value as SortKey)}
+                style={{
+                  padding: '7px 12px',
+                  background: 'var(--bg-page)',
+                  border: '1px solid var(--border-input)',
+                  borderRadius: '9999px',
+                  fontSize: '12px',
+                  color: 'var(--text-near-black)',
+                  outline: 'none',
+                  fontFamily: 'Inter, sans-serif',
+                  cursor: 'pointer',
+                }}
+              >
+                <option value="created_desc">최신 등록순</option>
+                <option value="remaining_asc">잔여일 ↑ (낮은순)</option>
+                <option value="remaining_desc">잔여일 ↓ (높은순)</option>
+                <option value="name_asc">이름순</option>
+              </select>
             </div>
           </div>
 
           {loading ? (
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '80px 24px',
-              gap: '16px',
-            }}>
-              <div style={{
-                width: '32px',
-                height: '32px',
-                border: '2.5px solid var(--border-card)',
-                borderTopColor: '#000',
-                borderRadius: '50%',
-                animation: 'spin 0.8s linear infinite',
-              }} />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 24px', gap: '16px' }}>
+              <div style={{ width: '32px', height: '32px', border: '2.5px solid var(--border-card)', borderTopColor: '#000', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
               <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
               <p style={{ fontSize: '13px', color: 'var(--text-tertiary)' }}>불러오는 중...</p>
             </div>
-          ) : licenses.length === 0 ? (
-            <div style={{
-              padding: '80px 24px',
-              textAlign: 'center',
-            }}>
-              <p style={{ fontSize: '14px', color: 'var(--text-tertiary)' }}>등록된 라이선스가 없습니다.</p>
-              <button
-                onClick={() => { setNewKey(genKey()); setShowCreate(true) }}
-                style={{
-                  marginTop: '16px',
-                  background: '#000',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '9999px',
-                  padding: '10px 20px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  fontFamily: 'Inter, sans-serif',
-                }}
-              >
-                첫 라이선스 발급하기
-              </button>
+          ) : filteredAndSorted.length === 0 ? (
+            <div style={{ padding: '80px 24px', textAlign: 'center' }}>
+              <p style={{ fontSize: '14px', color: 'var(--text-tertiary)' }}>
+                {searchQuery ? '검색 결과가 없습니다.' : '등록된 라이선스가 없습니다.'}
+              </p>
+              {!searchQuery && (
+                <button
+                  onClick={() => { setNewKey(genKey()); setShowCreate(true) }}
+                  style={{ marginTop: '16px', background: '#000', color: '#fff', border: 'none', borderRadius: '9999px', padding: '10px 20px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
+                >
+                  첫 라이선스 발급하기
+                </button>
+              )}
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--border-card)' }}>
-                    {['라이선스 키', '만료일', '남은 기간', '상태', '액션'].map((th, i) => (
+                    {['이름 / 전화번호', '라이선스 키', '만료일', '남은 기간', '상태', '액션'].map((th, i) => (
                       <th key={th} style={{
                         padding: '12px 20px',
                         fontSize: '11px',
                         fontWeight: 600,
                         color: 'var(--text-tertiary)',
-                        textAlign: i === 4 ? 'right' : 'left',
+                        textAlign: i === 5 ? 'right' : 'left',
                         letterSpacing: '0.3px',
                         textTransform: 'uppercase',
                         background: 'var(--bg-page)',
@@ -551,20 +570,27 @@ export default function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {licenses.map(lic => {
+                  {filteredAndSorted.map(lic => {
                     const remaining = getRemainingDays(lic.expires_at)
                     const isExpired = remaining < 0
-                    const isUrgent = !isExpired && remaining <= 3
+                    const isUrgent = !isExpired && remaining <= 7
                     return (
                       <tr
                         key={lic.id}
-                        style={{
-                          borderBottom: '1px solid var(--border-card)',
-                          transition: 'background 0.1s',
-                        }}
+                        style={{ borderBottom: '1px solid var(--border-card)', transition: 'background 0.1s' }}
                         onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-page)')}
                         onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                       >
+                        <td style={{ padding: '16px 20px', minWidth: '140px' }}>
+                          <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-near-black)' }}>
+                            {lic.name ?? <span style={{ color: 'var(--text-tertiary)' }}>—</span>}
+                          </div>
+                          {lic.phone && (
+                            <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '2px' }}>
+                              {lic.phone}
+                            </div>
+                          )}
+                        </td>
                         <td style={{ padding: '16px 20px' }}>
                           <span style={{
                             fontFamily: 'JetBrains Mono, monospace',
@@ -593,22 +619,13 @@ export default function DashboardPage() {
                         </td>
                         <td style={{ padding: '16px 20px', textAlign: 'right' }}>
                           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
-                            <ActionButton
-                              variant="default"
-                              onClick={() => { setExtendTarget(lic); setExtendDays(90) }}
-                            >
+                            <ActionButton variant="default" onClick={() => { setExtendTarget(lic); setExtendDays(90) }}>
                               연장
                             </ActionButton>
-                            <ActionButton
-                              variant={lic.is_active ? 'warning' : 'success'}
-                              onClick={() => handleToggleActive(lic)}
-                            >
+                            <ActionButton variant={lic.is_active ? 'warning' : 'success'} onClick={() => handleToggleActive(lic)}>
                               {lic.is_active ? '비활성화' : '활성화'}
                             </ActionButton>
-                            <ActionButton
-                              variant="danger"
-                              onClick={() => handleDelete(lic)}
-                            >
+                            <ActionButton variant="danger" onClick={() => handleDelete(lic)}>
                               삭제
                             </ActionButton>
                           </div>
@@ -625,33 +642,39 @@ export default function DashboardPage() {
 
       {showCreate && (
         <Modal title="새 라이선스 발급" onClose={() => setShowCreate(false)}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <label style={labelStyle}>이름</label>
+                <input
+                  value={newName}
+                  onChange={e => setNewName(e.target.value)}
+                  placeholder="홍길동"
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>전화번호</label>
+                <input
+                  value={newPhone}
+                  onChange={e => setNewPhone(e.target.value)}
+                  placeholder="010-0000-0000"
+                  style={inputStyle}
+                />
+              </div>
+            </div>
+
             <div>
-              <label style={{
-                display: 'block',
-                fontSize: '12px',
-                fontWeight: 500,
-                color: 'var(--text-secondary)',
-                marginBottom: '8px',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-              }}>
-                라이선스 키
-              </label>
+              <label style={labelStyle}>라이선스 키</label>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <input
                   value={newKey}
                   onChange={e => setNewKey(e.target.value)}
                   style={{
+                    ...inputStyle,
                     flex: 1,
-                    background: 'var(--bg-page)',
-                    border: '1px solid var(--border-input)',
-                    borderRadius: '8px',
-                    padding: '10px 12px',
                     fontSize: '12px',
                     fontFamily: 'JetBrains Mono, monospace',
-                    color: 'var(--text-near-black)',
-                    outline: 'none',
                     letterSpacing: '0.5px',
                   }}
                 />
@@ -679,23 +702,9 @@ export default function DashboardPage() {
             </div>
 
             <div>
-              <label style={{
-                display: 'block',
-                fontSize: '12px',
-                fontWeight: 500,
-                color: 'var(--text-secondary)',
-                marginBottom: '10px',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-              }}>
-                사용 기간
-              </label>
+              <label style={{ ...labelStyle, marginBottom: '10px' }}>사용 기간</label>
               <DaySelector value={newDays} onChange={setNewDays} />
-              <p style={{
-                marginTop: '12px',
-                fontSize: '12px',
-                color: 'var(--text-tertiary)',
-              }}>
+              <p style={{ marginTop: '12px', fontSize: '12px', color: 'var(--text-tertiary)' }}>
                 만료일: {formatDate(addDays(newDays))}
               </p>
             </div>
@@ -704,17 +713,10 @@ export default function DashboardPage() {
               <button
                 onClick={() => setShowCreate(false)}
                 style={{
-                  flex: 1,
-                  padding: '12px',
-                  borderRadius: '9999px',
-                  background: 'var(--bg-page)',
-                  border: '1px solid var(--border-input)',
-                  color: 'var(--text-secondary)',
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  fontFamily: 'Inter, sans-serif',
-                  transition: 'opacity 0.15s',
+                  flex: 1, padding: '12px', borderRadius: '9999px',
+                  background: 'var(--bg-page)', border: '1px solid var(--border-input)',
+                  color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 500,
+                  cursor: 'pointer', fontFamily: 'Inter, sans-serif', transition: 'opacity 0.15s',
                 }}
                 onMouseEnter={e => (e.currentTarget.style.opacity = '0.7')}
                 onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
@@ -725,18 +727,12 @@ export default function DashboardPage() {
                 onClick={handleCreate}
                 disabled={creating || !newKey}
                 style={{
-                  flex: 1,
-                  padding: '12px',
-                  borderRadius: '9999px',
-                  background: '#000000',
-                  border: 'none',
-                  color: '#ffffff',
-                  fontSize: '13px',
-                  fontWeight: 600,
+                  flex: 1, padding: '12px', borderRadius: '9999px',
+                  background: '#000000', border: 'none', color: '#ffffff',
+                  fontSize: '13px', fontWeight: 600,
                   cursor: creating || !newKey ? 'not-allowed' : 'pointer',
                   opacity: creating || !newKey ? 0.5 : 1,
-                  fontFamily: 'Inter, sans-serif',
-                  transition: 'opacity 0.15s',
+                  fontFamily: 'Inter, sans-serif', transition: 'opacity 0.15s',
                 }}
               >
                 {creating ? '발급 중...' : '발급하기'}
@@ -754,17 +750,7 @@ export default function DashboardPage() {
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div>
-              <label style={{
-                display: 'block',
-                fontSize: '12px',
-                fontWeight: 500,
-                color: 'var(--text-secondary)',
-                marginBottom: '10px',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-              }}>
-                추가할 기간
-              </label>
+              <label style={{ ...labelStyle, marginBottom: '10px' }}>추가할 기간</label>
               <DaySelector value={extendDays} onChange={setExtendDays} prefix="+" />
             </div>
 
@@ -772,17 +758,10 @@ export default function DashboardPage() {
               <button
                 onClick={() => setExtendTarget(null)}
                 style={{
-                  flex: 1,
-                  padding: '12px',
-                  borderRadius: '9999px',
-                  background: 'var(--bg-page)',
-                  border: '1px solid var(--border-input)',
-                  color: 'var(--text-secondary)',
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  fontFamily: 'Inter, sans-serif',
-                  transition: 'opacity 0.15s',
+                  flex: 1, padding: '12px', borderRadius: '9999px',
+                  background: 'var(--bg-page)', border: '1px solid var(--border-input)',
+                  color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 500,
+                  cursor: 'pointer', fontFamily: 'Inter, sans-serif', transition: 'opacity 0.15s',
                 }}
                 onMouseEnter={e => (e.currentTarget.style.opacity = '0.7')}
                 onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
@@ -792,17 +771,10 @@ export default function DashboardPage() {
               <button
                 onClick={handleExtend}
                 style={{
-                  flex: 1,
-                  padding: '12px',
-                  borderRadius: '9999px',
-                  background: '#000000',
-                  border: 'none',
-                  color: '#ffffff',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  fontFamily: 'Inter, sans-serif',
-                  transition: 'opacity 0.15s',
+                  flex: 1, padding: '12px', borderRadius: '9999px',
+                  background: '#000000', border: 'none', color: '#ffffff',
+                  fontSize: '13px', fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'Inter, sans-serif', transition: 'opacity 0.15s',
                 }}
                 onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
                 onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
