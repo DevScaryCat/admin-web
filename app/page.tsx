@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
+  const [id, setId] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -15,7 +16,7 @@ export default function LoginPage() {
     const res = await fetch('/api/auth', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({ id, password }),
     })
     setLoading(false)
     if (res.ok) {
@@ -101,6 +102,45 @@ export default function LoginPage() {
                 color: 'var(--text-mid)',
                 marginBottom: '8px',
               }}>
+                아이디
+              </label>
+              <input
+                type="text"
+                value={id}
+                onChange={e => setId(e.target.value)}
+                placeholder="관리자 아이디"
+                required
+                autoComplete="username"
+                style={{
+                  width: '100%',
+                  background: 'var(--bg-page)',
+                  border: '1px solid var(--border-input)',
+                  borderRadius: '8px',
+                  padding: '10px 14px',
+                  fontSize: '14px',
+                  color: 'var(--text-near-black)',
+                  outline: 'none',
+                  transition: 'border-color 0.15s, box-shadow 0.15s',
+                  fontFamily: 'Inter, sans-serif',
+                }}
+                onFocus={e => {
+                  e.target.style.borderColor = '#000'
+                  e.target.style.boxShadow = '0 0 0 3px rgba(0,0,0,0.08)'
+                }}
+                onBlur={e => {
+                  e.target.style.borderColor = 'var(--border-input)'
+                  e.target.style.boxShadow = 'none'
+                }}
+              />
+            </div>
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '13px',
+                fontWeight: 500,
+                color: 'var(--text-mid)',
+                marginBottom: '8px',
+              }}>
                 비밀번호
               </label>
               <input
@@ -109,6 +149,7 @@ export default function LoginPage() {
                 onChange={e => setPassword(e.target.value)}
                 placeholder="관리자 비밀번호를 입력하세요"
                 required
+                autoComplete="current-password"
                 style={{
                   width: '100%',
                   background: 'var(--bg-page)',
