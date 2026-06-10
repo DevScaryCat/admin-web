@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react'
 // 공개 다운로드 페이지 — 깃허브 최신 릴리스(public repo)를 자동 연동.
 // 버전을 새로 올려도 이 페이지는 항상 최신 파일을 가리킨다(수정 불필요).
 const RELEASES_API = 'https://api.github.com/repos/DevScaryCat/autobrand-releases/releases/latest'
+const GUIDE_URL =
+  'https://twilight-protest-35d.notion.site/AutoBrand-Connect-37464849578d8113bfa4d87cc13aa9cf'
 
 type Assets = {
   version: string
@@ -179,7 +181,29 @@ export default function DownloadPage() {
           </>
         )}
 
-        <p style={{ color: '#6b7178', fontSize: 12, marginTop: 22, lineHeight: 1.6 }}>
+        {/* 사용법 · 주의사항 (Notion) */}
+        <a
+          href={GUIDE_URL}
+          target="_blank"
+          rel="noreferrer"
+          style={{
+            display: 'block',
+            width: '100%',
+            marginTop: 20,
+            padding: '14px',
+            borderRadius: 12,
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            color: '#e7eaee',
+            fontWeight: 600,
+            fontSize: 14,
+            textDecoration: 'none',
+          }}
+        >
+          📘 사용법 · 주의사항 (설치 전 꼭 읽어주세요)
+        </a>
+
+        <p style={{ color: '#6b7178', fontSize: 12, marginTop: 16, lineHeight: 1.6 }}>
           Windows는 설치 파일(.exe)을, Mac은 .dmg 파일을 받아 실행하세요.
           <br />
           설치 후에는 새 버전이 나오면 앱이 자동으로 업데이트됩니다.
