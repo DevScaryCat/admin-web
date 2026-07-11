@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 
 // Supabase 무료 플랜은 7일 무활동 시 프로젝트를 자동 정지시킨다.
@@ -6,7 +6,14 @@ import { supabaseAdmin } from '@/lib/supabase'
 // "활동 중" 상태를 유지 → 자동 정지를 막는다. (vercel.json 의 crons 참고)
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // CRON_SECRET 이 설정돼 있으면 Vercel Cron 이 보내는 Authorization 헤더를 검증한다.
+  // (미설정 시엔 게이트 없이 동작 → 기존 동작 유지, keepalive 가 깨지지 않음)
+  const secret = process.env.CRON_SECRET
+  if (secret && req.headers.get('authorization') !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const { error } = await supabaseAdmin
     .from('licenses')
     .select('id', { count: 'exact', head: true })
